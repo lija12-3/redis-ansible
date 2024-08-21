@@ -35,15 +35,32 @@
         line: 'bind 127.0.0.1'
       notify: Restart Redis
 
+    - name: Check if Redis port 6379 is already in use
+      command: netstat -tuln | grep ':6379'
+      register: port_check
+      failed_when: false
+
+    - name: Print port check result
+      debug:
+        msg: "{{ port_check.stdout }}"
+
     - name: Ensure Redis service is restarted if not running
       service:
         name: redis-server
         state: restarted
       when: "'Active: active (running)' not in redis_status.stdout"
 
+    - name: Print the last 50 lines of Redis log for further debugging
+      command: tail -n 50 /var/log/redis/redis-server.log
+      register: redis_log
+      failed_when: false
+
+    - name: Print Redis log
+      debug:
+        msg: "{{ redis_log.stdout }}"
+
   handlers:
     - name: Restart Redis
       service:
         name: redis-server
         state: restarted
-
