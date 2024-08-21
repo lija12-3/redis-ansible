@@ -1,0 +1,48 @@
+---
+- name: Install and configure Redis on Debian 12
+  hosts: debian_servers
+  become: yes
+  tasks:
+    - name: Update APT package index
+      apt:
+        update_cache: yes
+
+    - name: Install Redis server
+      apt:
+        name: redis-server
+        state: present
+
+    - name: Ensure Redis service is started and enabled
+      service:
+        name: redis-server
+        state: started
+        enabled: yes
+
+    - name: Check Redis service status
+      command: systemctl status redis-server
+      register: redis_status
+      changed_when: false
+      failed_when: false
+
+    - name: Print Redis service status
+      debug:
+        msg: "{{ redis_status.stdout }}"
+
+    - name: Modify Redis configuration file
+      lineinfile:
+        path: /etc/redis/redis.conf
+        regexp: '^#?bind '
+        line: 'bind 127.0.0.1'
+      notify: Restart Redis
+
+    - name: Ensure Redis service is restarted after configuration change
+      service:
+        name: redis-server
+        state: restarted
+      when: redis_status.stdout.find('Active: active (running)') == -1
+
+  handlers:
+    - name: Restart Redis
+      service:
+        name: redis-server
+        state: restarted
