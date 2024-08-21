@@ -35,14 +35,15 @@
         line: 'bind 127.0.0.1'
       notify: Restart Redis
 
-    - name: Ensure Redis service is restarted after configuration change
+    - name: Ensure Redis service is restarted if not running
       service:
         name: redis-server
         state: restarted
-      when: redis_status.stdout.find('Active: active (running)') == -1
+      when: "'Active: active (running)' not in redis_status.stdout"
 
   handlers:
     - name: Restart Redis
       service:
         name: redis-server
         state: restarted
+
