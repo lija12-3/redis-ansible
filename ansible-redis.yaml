@@ -11,15 +11,11 @@
       # This task adds the GPG key for the Redis package repository to the system's keyring.
       ansible.builtin.shell:
         cmd: curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
-      args:
-        warn: false
 
     - name: Add the Redis repository to sources list
       # This task adds the Redis package repository to the system's sources list.
       ansible.builtin.shell:
         cmd: echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/redis.list
-      args:
-        warn: false
 
     - name: Update the package list
       # This task updates the package list to include packages from the newly added Redis repository.
@@ -29,7 +25,7 @@
     - name: Install Redis server
       # This task installs the Redis server package.
       ansible.builtin.apt:
-        name: redis
+        name: redis-server
         state: present
 
     - name: Ensure Redis service is started and enabled
@@ -48,4 +44,4 @@
     - name: Display Redis server version
       # This task displays the version of Redis that was installed.
       ansible.builtin.debug:
-        msg: "{{ redis_version_output.stdout }}"
+        msg: "Installed Redis version: {{ redis_version_output.stdout }}"
