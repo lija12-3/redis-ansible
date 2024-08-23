@@ -7,6 +7,20 @@
   become: true
   tasks:
 
+    - name: Ensure curl is installed
+      # This task ensures that curl is installed on the system.
+      ansible.builtin.apt:
+        name: curl
+        state: present
+        update_cache: yes
+
+    - name: Ensure gpg is installed
+      # This task ensures that gpg is installed on the system.
+      ansible.builtin.apt:
+        name: gpg
+        state: present
+        update_cache: yes
+
     - name: Add the Redis GPG key
       # This task adds the GPG key for the Redis package repository to the system's keyring.
       ansible.builtin.shell:
