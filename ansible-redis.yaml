@@ -1,66 +1,51 @@
 ---
-- name: Install and configure Redis on Debian 12
-  hosts: debian_servers
-  become: yes
+# Playbook to install Redis on Debian 12, add the official Redis repository,
+# and display the installed Redis server version.
+
+- name: Install Redis on Debian 12
+  hosts: all
+  become: true
   tasks:
-    - name: Update APT package index
-      apt:
+
+    - name: Add the Redis GPG key
+      # This task adds the GPG key for the Redis package repository to the system's keyring.
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+      args:
+        warn: false
+
+    - name: Add the Redis repository to sources list
+      # This task adds the Redis package repository to the system's sources list.
+      ansible.builtin.shell:
+        cmd: echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/redis.list
+      args:
+        warn: false
+
+    - name: Update the package list
+      # This task updates the package list to include packages from the newly added Redis repository.
+      ansible.builtin.apt:
         update_cache: yes
 
     - name: Install Redis server
-      apt:
-        name: redis-server
+      # This task installs the Redis server package.
+      ansible.builtin.apt:
+        name: redis
         state: present
 
     - name: Ensure Redis service is started and enabled
-      service:
+      # This task ensures that the Redis service is running and enabled to start at boot.
+      ansible.builtin.service:
         name: redis-server
         state: started
         enabled: yes
 
-    - name: Check Redis service status
-      command: systemctl status redis-server
-      register: redis_status
-      changed_when: false
-      failed_when: false
+    - name: Show Redis server version
+      # This task retrieves and displays the installed Redis server version.
+      ansible.builtin.command:
+        cmd: redis-server --version
+      register: redis_version_output
 
-    - name: Print Redis service status
-      debug:
-        msg: "{{ redis_status.stdout }}"
-
-    - name: Modify Redis configuration file
-      lineinfile:
-        path: /etc/redis/redis.conf
-        regexp: '^#?bind '
-        line: 'bind 127.0.0.1'
-      notify: Restart Redis
-
-    - name: Check if Redis port 6379 is already in use
-      command: netstat -tuln | grep ':6379'
-      register: port_check
-      failed_when: false
-
-    - name: Print port check result
-      debug:
-        msg: "{{ port_check.stdout }}"
-
-    - name: Ensure Redis service is restarted if not running
-      service:
-        name: redis-server
-        state: restarted
-      when: "'Active: active (running)' not in redis_status.stdout"
-
-    - name: Print the last 50 lines of Redis log for further debugging
-      command: tail -n 50 /var/log/redis/redis-server.log
-      register: redis_log
-      failed_when: false
-
-    - name: Print Redis log
-      debug:
-        msg: "{{ redis_log.stdout }}"
-
-  handlers:
-    - name: Restart Redis
-      service:
-        name: redis-server
-        state: restarted
+    - name: Display Redis server version
+      # This task displays the version of Redis that was installed.
+      ansible.builtin.debug:
+        msg: "{{ redis_version_output.stdout }}"
