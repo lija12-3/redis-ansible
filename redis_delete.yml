@@ -1,0 +1,67 @@
+---
+# Playbook to remove Redis installation, configuration, and repository files on Debian 12.
+
+- name: Remove Redis on Debian 12
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Stop Redis service
+      # This task stops the Redis service before removing it.
+      ansible.builtin.service:
+        name: redis-server
+        state: stopped
+        enabled: no
+      ignore_errors: yes
+
+    - name: Uninstall Redis server
+      # This task uninstalls the Redis server package.
+      ansible.builtin.apt:
+        name: redis-server
+        state: absent
+
+    - name: Remove the Redis repository file
+      # This task removes the Redis repository file from the sources list.
+      ansible.builtin.file:
+        path: /etc/apt/sources.list.d/redis.list
+        state: absent
+
+    - name: Remove the Redis GPG keyring file
+      # This task removes the GPG keyring file associated with the Redis repository.
+      ansible.builtin.file:
+        path: /usr/share/keyrings/redis-archive-keyring.gpg
+        state: absent
+
+    - name: Update the package list
+      # This task updates the package list after removing the Redis repository.
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Check if any Redis configuration files remain
+      # This task checks if any Redis configuration files are still present.
+      ansible.builtin.find:
+        paths: /etc/redis/
+        recurse: yes
+      register: redis_config_files
+
+    - name: Remove Redis configuration files
+      # This task removes any remaining Redis configuration files if found.
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ redis_config_files.files }}"
+      when: redis_config_files.matched > 0
+
+    - name: Remove curl package (optional)
+      # This task removes the curl package if it was only installed for Redis installation.
+      ansible.builtin.apt:
+        name: curl
+        state: absent
+      ignore_errors: yes
+
+    - name: Remove gpg package (optional)
+      # This task removes the gpg package if it was only installed for Redis installation.
+      ansible.builtin.apt:
+        name: gpg
+        state: absent
+      ignore_errors: yes
