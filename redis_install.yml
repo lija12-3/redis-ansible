@@ -1,4 +1,3 @@
----
 # Playbook to install Redis on Debian 12, add the official Redis repository,
 # and display the installed Redis server version.
 
@@ -13,6 +12,14 @@
         name: curl
         state: present
         update_cache: yes
+      register: curl_install
+      ignore_errors: yes
+
+    - name: Log curl installation status
+      ansible.builtin.lineinfile:
+        path: /var/log/redis-install.log
+        line: "{{ ansible_date_time.iso8601 }} - curl installation: {{ curl_install.stdout }} {{ curl_install.stderr }} {{ 'SUCCESS' if curl_install.failed == false else 'FAILED' }}"
+        create: yes
 
     - name: Ensure gpg is installed
       # This task ensures that gpg is installed on the system.
@@ -20,27 +27,67 @@
         name: gpg
         state: present
         update_cache: yes
+      register: gpg_install
+      ignore_errors: yes
+
+    - name: Log gpg installation status
+      ansible.builtin.lineinfile:
+        path: /var/log/redis-install.log
+        line: "{{ ansible_date_time.iso8601 }} - gpg installation: {{ gpg_install.stdout }} {{ gpg_install.stderr }} {{ 'SUCCESS' if gpg_install.failed == false else 'FAILED' }}"
+        create: yes
 
     - name: Add the Redis GPG key
       # This task adds the GPG key for the Redis package repository to the system's keyring.
       ansible.builtin.shell:
         cmd: curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+      register: redis_gpg_key_add
+      ignore_errors: yes
+
+    - name: Log Redis GPG key addition
+      ansible.builtin.lineinfile:
+        path: /var/log/redis-install.log
+        line: "{{ ansible_date_time.iso8601 }} - Redis GPG key addition: {{ redis_gpg_key_add.stdout }} {{ redis_gpg_key_add.stderr }} {{ 'SUCCESS' if redis_gpg_key_add.failed == false else 'FAILED' }}"
+        create: yes
 
     - name: Add the Redis repository to sources list
       # This task adds the Redis package repository to the system's sources list.
       ansible.builtin.shell:
         cmd: echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/redis.list
+      register: redis_repo_add
+      ignore_errors: yes
+
+    - name: Log Redis repository addition
+      ansible.builtin.lineinfile:
+        path: /var/log/redis-install.log
+        line: "{{ ansible_date_time.iso8601 }} - Redis repository addition: {{ redis_repo_add.stdout }} {{ redis_repo_add.stderr }} {{ 'SUCCESS' if redis_repo_add.failed == false else 'FAILED' }}"
+        create: yes
 
     - name: Update the package list
       # This task updates the package list to include packages from the newly added Redis repository.
       ansible.builtin.apt:
         update_cache: yes
+      register: apt_update
+      ignore_errors: yes
+
+    - name: Log package list update
+      ansible.builtin.lineinfile:
+        path: /var/log/redis-install.log
+        line: "{{ ansible_date_time.iso8601 }} - Package list update: {{ apt_update.stdout }} {{ apt_update.stderr }} {{ 'SUCCESS' if apt_update.failed == false else 'FAILED' }}"
+        create: yes
 
     - name: Install Redis server
       # This task installs the Redis server package.
       ansible.builtin.apt:
         name: redis-server
         state: present
+      register: redis_install
+      ignore_errors: yes
+
+    - name: Log Redis installation
+      ansible.builtin.lineinfile:
+        path: /var/log/redis-install.log
+        line: "{{ ansible_date_time.iso8601 }} - Redis installation: {{ redis_install.stdout }} {{ redis_install.stderr }} {{ 'SUCCESS' if redis_install.failed == false else 'FAILED' }}"
+        create: yes
 
     - name: Ensure Redis service is started and enabled
       # This task ensures that the Redis service is running and enabled to start at boot.
@@ -48,12 +95,27 @@
         name: redis-server
         state: started
         enabled: yes
+      register: redis_service
+      ignore_errors: yes
+
+    - name: Log Redis service status
+      ansible.builtin.lineinfile:
+        path: /var/log/redis-install.log
+        line: "{{ ansible_date_time.iso8601 }} - Redis service start and enable: {{ redis_service.stdout }} {{ redis_service.stderr }} {{ 'SUCCESS' if redis_service.failed == false else 'FAILED' }}"
+        create: yes
 
     - name: Show Redis server version
       # This task retrieves and displays the installed Redis server version.
       ansible.builtin.command:
         cmd: redis-server --version
       register: redis_version_output
+      ignore_errors: yes
+
+    - name: Log Redis server version
+      ansible.builtin.lineinfile:
+        path: /var/log/redis-install.log
+        line: "{{ ansible_date_time.iso8601 }} - Redis server version: {{ redis_version_output.stdout }} {{ redis_version_output.stderr }} {{ 'SUCCESS' if redis_version_output.failed == false else 'FAILED' }}"
+        create: yes
 
     - name: Display Redis server version
       # This task displays the version of Redis that was installed.
